@@ -17,8 +17,8 @@
     <div id="settings-container">
       <div class="hitem">
         <p class="item-name">Samples</p>
-        <input id="slider-samples" type="range" class="slider" name="samplesRange" min="2" max="100" value="101" />
-        <input id="textbox-samples" class="textbox" type="number" name="samplesInput" min="2" value="100" />
+        <input id="slider-samples" type="range" class="slider" name="samplesRange" min="2" max="100" value="100" />
+        <input id="textbox-samples" class="textbox" type="number" name="samplesInput" min="2" value="101" />
       </div>
       <div class="hitem">
         <p class="item-name">Min</p>
@@ -26,11 +26,15 @@
       </div>
       <div class="hitem">
         <p class="item-name">Max</p>
-        <input id="text-max" class="textbox" type="number" name="maxText" value="100" />
+        <input id="text-max" class="textbox" type="number" name="maxText" value="1" />
+      </div>
+      <div class="hitem">
+        <p class="item-name">Precission</p>
+        <input id="text-precission" class="textbox" type="number" name="maxText" min="0" max="6" value="2" step="1" />
       </div>
     </div>
     <div id="container-lut">
-      <button id="btn-copy" type="button">Copy</button> 
+      <button id="btn-copy" type="button">Copy</button>
       <span id="textarea-lut" name="lut-table" role="textbox" readonly></span>
     </div>
   </div>

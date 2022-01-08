@@ -1,66 +1,51 @@
-let canvas, rect, ctx, width, height;
+let bezierPlot, samplesSlider, samplesText, textArea;
 
-let handle1, handle2, bezierCurve;
-
-let textArea;
-
-let samplesSlider, samplesText;
-
-let samples = 100;
+let samples = 101;
 let minValue = 0;
-let maxValue = 100;
+let maxValue = 1;
+let precission = 2;
+let scale = Math.pow(10, precission);
 
-let values = [];
+let values;
 
-const thumbColor = "#5D5FEF";
-const handleColor = "#A5A6F6";
-const curveColor = "#EF5DA8";
-const pointColor = "#FCDDEC";
-const backgroundColor = "#272727";
-const gridColor = "#5A5A5A";
+function setTextArea() {
+  textArea.innerText = values
+    .map((v) => {
+      return Math.round(lerp(minValue, maxValue, v) * scale) / scale;
+    })
+    .join(", ");
+}
+
+function calculateValues() {
+  values = getCubicBezierPoints(
+    bezierPlot.normalizedControlPoint1X,
+    bezierPlot.normalizedControlPoint1Y,
+    bezierPlot.normalizedControlPoint2X,
+    bezierPlot.normalizedControlPoint2Y,
+    samples
+  );
+  bezierPlot.samples = values;
+  bezierPlot.draw();
+  setTextArea();
+}
 
 window.onload = () => {
   // REFERENCES
 
-  textArea = document.getElementById("textarea-lut");
+  const canvas = document.getElementById("canvas-bezier");
+  bezierPlot = new BezierPlot(canvas);
+
   samplesSlider = document.getElementById("slider-samples");
   samplesText = document.getElementById("textbox-samples");
-
-  canvas = document.getElementById("canvas-bezier");
-  rect = canvas.getBoundingClientRect();
-  ctx = canvas.getContext("2d");
-  width = canvas.width;
-  height = canvas.height;
-
-  handle1 = new Handle(margin, height - margin);
-  handle2 = new Handle(width - margin, margin);
-  bezierCurve = new BezierCurve(
-    ctx,
-    margin,
-    height - margin,
-    width - margin,
-    margin
-  );
+  textArea = document.getElementById("textarea-lut");
 
   // EVENTS
 
-  canvas.onmousedown = (e) => {
-    setMousePosition(e.x, e.y);
-
-    handle2.isDragging = handle2.collision(mouse.x, mouse.y);
-    if (!handle2.isDragging)
-      handle1.isDragging = handle1.collision(mouse.x, mouse.y);
-
-    handle1.setPosition(mouse.x, mouse.y);
-    handle2.setPosition(mouse.x, mouse.y);
-
-    draw();
-  };
-
   samplesSlider.addEventListener("input", () => {
-    samples = samplesSlider.value;
     samplesText.value = samplesSlider.value;
-    draw();
+    samples = samplesSlider.value;
+
+    calculateValues();
   });
 
   samplesText.addEventListener("change", () => {
@@ -71,13 +56,13 @@ window.onload = () => {
     if (samplesText.value > 2) {
       samples = samplesText.value;
       samplesSlider.value = clamp(2, 100, samplesText.value);
-      draw();
     } else {
       samplesText.value = 2;
       samples = 2;
       samplesSlider.value = 2;
-      draw();
     }
+
+    calculateValues();
   });
 
   const minText = document.getElementById("text-min");
@@ -87,6 +72,7 @@ window.onload = () => {
       return;
     }
     minValue = parseFloat(minText.value);
+
     setTextArea();
   });
 
@@ -97,6 +83,25 @@ window.onload = () => {
       return;
     }
     maxValue = parseFloat(maxText.value);
+
+    setTextArea();
+  });
+
+  const precissionText = document.getElementById("text-precission");
+  precissionText.addEventListener("change", () => {
+    if (!precissionText.value) {
+      precissionText.value = precission;
+      return;
+    }
+    const precissionValue = Math.round(parseInt(precissionText.value));
+    if (0 <= precissionValue && precissionValue <= 6) {
+      precissionText.value = precission = precissionValue;
+    } else if (precissionValue < 0) {
+      precissionText.value = precission = 0;
+    } else {
+      precissionText.value = precission = 6;
+    }
+    scale = Math.pow(10, precission);
     setTextArea();
   });
 
@@ -105,276 +110,41 @@ window.onload = () => {
     const tmpTextArea = document.createElement("textarea");
     tmpTextArea.innerText = textArea.innerText;
     tmpTextArea.style.visibility = "hidden";
+    tmpTextArea.style.display = "none";
     document.body.appendChild(tmpTextArea);
     tmpTextArea.select();
     tmpTextArea.setSelectionRange(0, 99999);
     navigator.clipboard.writeText(tmpTextArea.value);
   });
 
-  draw();
+  calculateValues();
 };
 
-document.onmousemove = (e) => {
-  if (handle1.isDragging || handle2.isDragging) {
-    setMousePosition(e.x, e.y);
+function solveCubic(a, b, c, d) {
+  const evaluate = (x) => a * x * x * x + b * x * x + c * x + d;
+  const isZero = (v) => Math.abs(v) <= 0.001;
+  let leftX = 0;
+  let rightX = 1;
+  let leftY = evaluate(leftX);
+  let rightY = evaluate(rightX);
+  if (isZero(leftY)) return leftX;
+  if (isZero(rightY)) return rightX;
 
-    handle1.setPosition(mouse.x, mouse.y);
-    handle2.setPosition(mouse.x, mouse.y);
-    bezierCurve.setControlPoint1(handle1.x, handle1.y);
-    bezierCurve.setControlPoint2(handle2.x, handle2.y);
+  for (let i = 0; i < 100; i++) {
+    const midX = (leftX + rightX) / 2;
+    const midY = evaluate(midX);
+    if (isZero(midY)) return midX;
 
-    draw();
+    if (midY < 0 && leftY < 0) {
+      leftX = midX;
+    } else {
+      rightX = midX;
+    }
   }
-};
-
-document.onmouseup = (e) => {
-  handle1.isDragging = false;
-  handle2.isDragging = false;
-};
-
-window.addEventListener("resize", () => {
-  rect = canvas.getBoundingClientRect();
-});
-
-window.addEventListener("scroll", () => {
-  rect = canvas.getBoundingClientRect();
-});
+}
 
 function clamp(num, min, max) {
   return Math.min(Math.max(num, min), max);
-}
-
-const margin = 14;
-
-function setMousePosition(x, y) {
-  mouse.x = clamp(x - rect.left, margin, width - margin);
-  mouse.y = clamp(y - rect.top, margin, height - margin);
-}
-
-function drawBackground() {
-  ctx.fillStyle = backgroundColor;
-  ctx.fillRect(margin, margin, width - 2 * margin, height - 2 * margin);
-
-  const cells = 10;
-  const cellWidth = (width - margin * 2) / cells;
-  const cellHeight = (height - margin * 2) / cells;
-  ctx.strokeStyle = gridColor;
-  ctx.lineWidth = 1;
-  for (let i = 0; i <= cells; i++) {
-    ctx.moveTo(margin + cellWidth * i, margin);
-    ctx.lineTo(margin + cellWidth * i, height - margin);
-    ctx.moveTo(margin, margin + cellHeight * i);
-    ctx.lineTo(width - margin, margin + cellHeight * i);
-  }
-  ctx.stroke();
-}
-
-const mouse = {
-  x: undefined,
-  y: undefined,
-};
-
-class Handle {
-  constructor(xFrom, yFrom) {
-    this.xFrom = xFrom;
-    this.yFrom = yFrom;
-    this.x = xFrom;
-    this.y = yFrom;
-    this.radius = margin - 2;
-    this.isDragging = false;
-  }
-
-  setPosition(x, y) {
-    if (this.isDragging) {
-      this.x = x;
-      this.y = y;
-    }
-  }
-
-  draw() {
-    ctx.fillStyle = handleColor;
-    ctx.beginPath();
-    ctx.arc(this.xFrom, this.yFrom, 5, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = handleColor;
-    ctx.lineWidth = 5;
-    ctx.strokeStyle = handleColor;
-    ctx.beginPath();
-    ctx.moveTo(this.xFrom, this.yFrom);
-    ctx.lineTo(this.x, this.y);
-    ctx.stroke();
-    ctx.fillStyle = thumbColor;
-    ctx.beginPath();
-    ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-    ctx.fill();
-  }
-
-  collision(x, y) {
-    const xMin = this.x - this.radius;
-    const xMax = this.x + this.radius;
-    const yMin = this.y - this.radius;
-    const yMax = this.y + this.radius;
-    if (xMin <= x && x <= xMax && yMin <= y && y <= yMax) return true;
-    return false;
-  }
-}
-
-class BezierCurve {
-  constructor(ctx, startX, startY, endX, endY) {
-    this.ctx = ctx;
-    this.startPoint = { x: startX, y: startY };
-    this.endPoint = { x: endX, y: endY };
-    this.controlPoint1 = { x: startX, y: startY };
-    this.controlPoint2 = { x: endX, y: endY };
-  }
-
-  setControlPoint1(x, y) {
-    this.controlPoint1.x = x;
-    this.controlPoint1.y = y;
-  }
-
-  setControlPoint2(x, y) {
-    this.controlPoint2.x = x;
-    this.controlPoint2.y = y;
-  }
-
-  draw() {
-    this.ctx.beginPath();
-    this.ctx.strokeStyle = curveColor;
-    this.ctx.lineWidth = 5;
-    this.ctx.moveTo(this.startPoint.x, this.startPoint.y);
-    this.ctx.bezierCurveTo(
-      this.controlPoint1.x,
-      this.controlPoint1.y,
-      this.controlPoint2.x,
-      this.controlPoint2.y,
-      this.endPoint.x,
-      this.endPoint.y
-    );
-    this.ctx.stroke();
-
-    this.evaluate(samples);
-  }
-
-  evaluateY(t) {
-    const value =
-      Math.pow(1 - t, 3) * this.startPoint.y +
-      3 * Math.pow(1 - t, 2) * t * this.controlPoint1.y +
-      3 * (1 - t) * Math.pow(t, 2) * this.controlPoint2.y +
-      Math.pow(t, 3) * this.endPoint.y;
-    return value;
-  }
-
-  evaluateT(x) {
-    const a = this.startPoint.x;
-    const b = this.controlPoint1.x;
-    const c = this.controlPoint2.x;
-    const d = this.endPoint.x;
-
-    const solutions = solveCubic(
-      -a + 3 * b - 3 * c + d,
-      3 * a - 6 * b + 3 * c,
-      -3 * a + 3 * b,
-      a - x
-    );
-    for (let i = 0; i < solutions.length; i++) {
-      if (0 <= solutions[i] && solutions[i] <= 1) return solutions[i];
-    }
-    return undefined;
-  }
-
-  evaluate(steps) {
-    values = [];
-    for (let i = 0; i < steps; i++) {
-      const x = lerp(this.startPoint.x, this.endPoint.x, i / (steps - 1));
-      const y = this.evaluateY(this.evaluateT(x));
-      drawPoint(x, y);
-      const value = inverseLerp(this.startPoint.y, this.endPoint.y, y);
-      values.push(value);
-    }
-    setTextArea();
-  }
-}
-
-function setTextArea() {
-  const range = maxValue - minValue;
-  let scale;
-  if (range > 10) {
-    scale = 1;
-  } else if (range > 1) {
-    scale = 10;
-  } else {
-    scale = 100;
-  }
-
-  textArea.innerText = values
-    .map((v) => {
-      return Math.round(lerp(minValue, maxValue, v)*scale)/scale
-    })
-    .join(", ");
-}
-
-function cuberoot(x) {
-  var y = Math.pow(Math.abs(x), 1 / 3);
-  return x < 0 ? -y : y;
-}
-
-function solveCubic(a, b, c, d) {
-  if (Math.abs(a) < 1e-8) {
-    // Quadratic case, ax^2+bx+c=0
-    a = b;
-    b = c;
-    c = d;
-    if (Math.abs(a) < 1e-8) {
-      // Linear case, ax+b=0
-      a = b;
-      b = c;
-      if (Math.abs(a) < 1e-8)
-        // Degenerate case
-        return [];
-      return [-b / a];
-    }
-
-    var D = b * b - 4 * a * c;
-    if (Math.abs(D) < 1e-8) return [-b / (2 * a)];
-    else if (D > 0)
-      return [(-b + Math.sqrt(D)) / (2 * a), (-b - Math.sqrt(D)) / (2 * a)];
-    return [];
-  }
-
-  // Convert to depressed cubic t^3+pt+q = 0 (subst x = t - b/3a)
-  var p = (3 * a * c - b * b) / (3 * a * a);
-  var q = (2 * b * b * b - 9 * a * b * c + 27 * a * a * d) / (27 * a * a * a);
-  var roots;
-
-  if (Math.abs(p) < 1e-8) {
-    // p = 0 -> t^3 = -q -> t = -q^1/3
-    roots = [cuberoot(-q)];
-  } else if (Math.abs(q) < 1e-8) {
-    // q = 0 -> t^3 + pt = 0 -> t(t^2+p)=0
-    roots = [0].concat(p < 0 ? [Math.sqrt(-p), -Math.sqrt(-p)] : []);
-  } else {
-    var D = (q * q) / 4 + (p * p * p) / 27;
-    if (Math.abs(D) < 1e-8) {
-      // D = 0 -> two roots
-      roots = [(-1.5 * q) / p, (3 * q) / p];
-    } else if (D > 0) {
-      // Only one real root
-      var u = cuberoot(-q / 2 - Math.sqrt(D));
-      roots = [u - p / (3 * u)];
-    } else {
-      // D < 0, three roots, but needs to use complex numbers/trigonometric solution
-      var u = 2 * Math.sqrt(-p / 3);
-      var t = Math.acos((3 * q) / p / u) / 3; // D < 0 implies p < 0 and acos argument in [-1..1]
-      var k = (2 * Math.PI) / 3;
-      roots = [u * Math.cos(t), u * Math.cos(t - k), u * Math.cos(t - 2 * k)];
-    }
-  }
-
-  // Convert back from depressed cubic
-  for (var i = 0; i < roots.length; i++) roots[i] -= b / (3 * a);
-
-  return roots;
 }
 
 function lerp(min, max, t) {
@@ -385,17 +155,394 @@ function inverseLerp(min, max, value) {
   return (value - min) / (max - min);
 }
 
-function drawPoint(x, y) {
-  ctx.fillStyle = pointColor;
-  ctx.beginPath();
-  ctx.arc(x, y, 2, 0, Math.PI * 2);
-  ctx.fill();
+function getCubicBezierPoints(
+  normalizedControlPoint1X,
+  normalizedControlPoint1Y,
+  normalizedControlPoint2X,
+  normalizedControlPoint2Y,
+  count
+) {
+  function evaluateY(t) {
+    return (
+      3 * Math.pow(1 - t, 2) * t * normalizedControlPoint1Y +
+      3 * (1 - t) * Math.pow(t, 2) * normalizedControlPoint2Y +
+      Math.pow(t, 3)
+    );
+  }
+
+  function evaluateT(x) {
+    const b = normalizedControlPoint1X;
+    const c = normalizedControlPoint2X;
+
+    return solveCubic(3 * b - 3 * c + 1, -6 * b + 3 * c, 3 * b, -x);
+  }
+
+  let values = [];
+  for (let i = 0; i < count; i++) {
+    values.push(evaluateY(evaluateT(i / (count - 1))));
+  }
+  return values;
 }
 
-function draw() {
-  ctx.clearRect(0, 0, width, height);
-  drawBackground();
-  bezierCurve.draw();
-  handle1.draw();
-  handle2.draw();
+class BezierPlot {
+  constructor(canvas) {
+    this.canvas = canvas;
+    this.curveColor = "#EF5DA8";
+    this.pointColor = "#FCDDEC";
+    this.backgroundColor = "#272727";
+    this.gridColor = "#5A5A5A";
+
+    this.ctx = canvas.getContext("2d");
+    this.rect = canvas.getBoundingClientRect();
+    this.margin = 20;
+
+    this.startPointX = this.controlPoint1X = this.margin;
+    this.startPointY = this.controlPoint1Y = this.rect.height - this.margin;
+    this.endPointX = this.controlPoint2X = this.rect.width - this.margin;
+    this.endPointY = this.controlPoint2Y = this.margin;
+
+    this.normalizedControlPoint1X = 0;
+    this.normalizedControlPoint1Y = 0;
+    this.normalizedControlPoint2X = 1;
+    this.normalizedControlPoint2Y = 1;
+
+    this.samples = [];
+
+    this.handle1 = new HandlePlot(
+      this.ctx,
+      this.startPointX,
+      this.startPointY,
+      this.controlPoint1X,
+      this.controlPoint1Y
+    );
+    this.handle2 = new HandlePlot(
+      this.ctx,
+      this.endPointX,
+      this.endPointY,
+      this.controlPoint2X,
+      this.controlPoint2Y
+    );
+
+    this.canvas.onmousedown = (e) => {
+      const [x, y] = this.clampPosition(e.x, e.y);
+
+      if (this.handle1.collision(x, y)) {
+        this.handle1.isDragging = true;
+        this.anyHandleDragging = true;
+        this.setControlPoint1(x, y);
+      } else if (this.handle2.collision(x, y)) {
+        this.handle2.isDragging = true;
+        this.anyHandleDragging = true;
+        this.setControlPoint2(x, y);
+      }
+
+      calculateValues();
+    };
+
+    this.anyHandleHighlighted = false;
+    this.anyHandleDragging = false;
+
+    this.canvas.onmousemove = (e) => {
+      if (this.anyHandleDragging) return;
+
+      const [x, y] = this.clampPosition(e.x, e.y);
+      if (this.handle1.collision(x, y)) {
+        this.handle1.highlight = true;
+        this.handle2.highlight = false;
+        this.anyHandleHighlighted = true;
+        this.canvas.style.cursor = "pointer";
+        this.draw();
+      } else if (this.handle2.collision(x, y)) {
+        this.handle2.highlight = true;
+        this.handle1.highlight = false;
+        this.anyHandleHighlighted = true;
+        this.canvas.style.cursor = "pointer";
+        this.draw();
+      } else if (this.anyHandleHighlighted && !this.anyHandleDragging) {
+        this.handle1.highlight = false;
+        this.handle2.highlight = false;
+        this.anyHandleHighlighted = false;
+        this.canvas.style.cursor = "default";
+        this.draw();
+      }
+    };
+
+    this.canvas.addEventListener("mouseout", (e) => {
+      if (
+        this.anyHandleHighlighted &&
+        !(this.handle1.isDragging || this.handle2.isDragging)
+      ) {
+        this.handle1.highlight = false;
+        this.handle2.highlight = false;
+        this.anyHandleHighlighted = false;
+        this.canvas.style.cursor = "default";
+        this.draw();
+      }
+    });
+
+    document.onmousemove = (e) => {
+      if (this.handle1.isDragging || this.handle2.isDragging) {
+        const [x, y] = this.clampPosition(e.x, e.y);
+        if (this.handle1.isDragging) {
+          this.setControlPoint1(x, y);
+        } else {
+          this.setControlPoint2(x, y);
+        }
+
+        calculateValues();
+      }
+    };
+
+    document.onmouseup = (e) => {
+      if (this.anyHandleDragging) {
+        this.handle1.isDragging = false;
+        this.handle2.isDragging = false;
+        this.anyHandleDragging = false;
+      }
+
+      if (this.anyHandleHighlighted) {
+        if (
+          !this.handle1.collision(e.x - this.rect.left, e.y - this.rect.top)
+        ) {
+          this.handle1.highlight = false;
+          this.anyHandleHighlighted = false;
+          this.draw();
+        }
+        if (
+          !this.handle2.collision(e.x - this.rect.left, e.y - this.rect.top)
+        ) {
+          this.handle2.highlight = false;
+          this.anyHandleHighlighted = false;
+          this.draw();
+        }
+      }
+    };
+
+    window.addEventListener("resize", () => {
+      this.updateRect();
+    });
+
+    window.addEventListener("scroll", () => {
+      this.updateRect();
+    });
+  }
+
+  setControlPoint1(x, y) {
+    this.controlPoint1X = x;
+    this.controlPoint1Y = y;
+    this.handle1.setPosition(x, y);
+
+    this.normalizedControlPoint1X = inverseLerp(
+      this.startPointX,
+      this.endPointX,
+      x
+    );
+    this.normalizedControlPoint1Y = inverseLerp(
+      this.startPointY,
+      this.endPointY,
+      y
+    );
+  }
+
+  setControlPoint2(x, y) {
+    this.controlPoint2X = x;
+    this.controlPoint2Y = y;
+    this.handle2.setPosition(x, y);
+
+    this.normalizedControlPoint2X = inverseLerp(
+      this.startPointX,
+      this.endPointX,
+      x
+    );
+    this.normalizedControlPoint2Y = inverseLerp(
+      this.startPointY,
+      this.endPointY,
+      y
+    );
+  }
+
+  updateRect() {
+    this.rect = this.canvas.getBoundingClientRect();
+    this.canvas.width = this.rect.width;
+    this.canvas.height = this.rect.height;
+
+    this.startPointY = this.rect.height - this.margin;
+    this.endPointX = this.rect.width - this.margin;
+    this.controlPoint1X = lerp(
+      this.startPointX,
+      this.endPointX,
+      this.normalizedControlPoint1X
+    );
+    this.controlPoint1Y = lerp(
+      this.startPointY,
+      this.endPointY,
+      this.normalizedControlPoint1Y
+    );
+    this.controlPoint2X = lerp(
+      this.startPointX,
+      this.endPointX,
+      this.normalizedControlPoint2X
+    );
+    this.controlPoint2Y = lerp(
+      this.startPointY,
+      this.endPointY,
+      this.normalizedControlPoint2Y
+    );
+
+    this.handle1.updatePoints(
+      this.startPointX,
+      this.startPointY,
+      this.controlPoint1X,
+      this.controlPoint1Y
+    );
+    this.handle2.updatePoints(
+      this.endPointX,
+      this.endPointY,
+      this.controlPoint2X,
+      this.controlPoint2Y
+    );
+
+    this.draw();
+  }
+
+  clampPosition(x, y) {
+    return [
+      clamp(x - this.rect.left, this.margin, this.rect.width - this.margin),
+      clamp(y - this.rect.top, this.margin, this.rect.height - this.margin),
+    ];
+  }
+
+  draw() {
+    this.ctx.clearRect(0, 0, this.rect.width, this.rect.height);
+    this.drawBackground();
+    this.drawCurve();
+    this.drawSamples();
+    this.handle2.draw();
+    this.handle1.draw();
+  }
+
+  drawBackground() {
+    this.ctx.fillStyle = this.backgroundColor;
+    this.ctx.fillRect(
+      this.margin,
+      this.margin,
+      this.rect.width - 2 * this.margin,
+      this.rect.height - 2 * this.margin
+    );
+
+    const cells = 10;
+    const cellSize = (this.rect.width - this.margin * 2) / cells;
+    this.ctx.strokeStyle = this.gridColor;
+    this.ctx.lineWidth = 1;
+    for (let i = 0; i <= cells; i++) {
+      this.ctx.moveTo(this.margin + cellSize * i, this.margin);
+      this.ctx.lineTo(
+        this.margin + cellSize * i,
+        this.rect.height - this.margin
+      );
+      this.ctx.moveTo(this.margin, this.margin + cellSize * i);
+      this.ctx.lineTo(
+        this.rect.width - this.margin,
+        this.margin + cellSize * i
+      );
+    }
+    this.ctx.stroke();
+  }
+
+  drawCurve() {
+    this.ctx.beginPath();
+    this.ctx.strokeStyle = this.curveColor;
+    this.ctx.lineWidth = 5;
+    this.ctx.moveTo(this.startPointX, this.startPointY);
+    this.ctx.bezierCurveTo(
+      this.controlPoint1X,
+      this.controlPoint1Y,
+      this.controlPoint2X,
+      this.controlPoint2Y,
+      this.endPointX,
+      this.endPointY
+    );
+    this.ctx.stroke();
+  }
+
+  drawSamples() {
+    const n = this.samples.length;
+    for (let i = 0; i < n; i++) {
+      const x = lerp(this.startPointX, this.endPointX, i / (n - 1));
+      const y = lerp(this.startPointY, this.endPointY, this.samples[i]);
+      this.drawSample(x, y);
+    }
+  }
+
+  drawSample(x, y) {
+    this.ctx.fillStyle = this.pointColor;
+    this.ctx.beginPath();
+    this.ctx.arc(x, y, 2, 0, Math.PI * 2);
+    this.ctx.fill();
+  }
+}
+
+class HandlePlot {
+  constructor(ctx, startX, startY, x, y) {
+    this.ctx = ctx;
+    this.startX = startX;
+    this.startY = startY;
+    this.x = x;
+    this.y = y;
+    this.radius = 14;
+    this.outline = 6;
+
+    this.handleColor = "#A5A6F6";
+    this.thumbColor = "#5D5FEF";
+    this.outlineColor = "rgba(165, 166, 246, 0.5)";
+
+    this.isDragging = false;
+    this.highlight = false;
+  }
+
+  updatePoints(startX, startY, x, y) {
+    this.startX = startX;
+    this.startY = startY;
+
+    this.setPosition(x, y);
+  }
+
+  setPosition(x, y) {
+    this.x = x;
+    this.y = y;
+
+    this.draw();
+  }
+
+  collision(x, y) {
+    const xMin = this.x - this.radius;
+    const xMax = this.x + this.radius;
+    const yMin = this.y - this.radius;
+    const yMax = this.y + this.radius;
+    return xMin <= x && x <= xMax && yMin <= y && y <= yMax;
+  }
+
+  draw() {
+    this.ctx.fillStyle = this.handleColor;
+    this.ctx.beginPath();
+    this.ctx.arc(this.startX, this.startY, 5, 0, Math.PI * 2);
+    this.ctx.fill();
+    this.ctx.strokeStyle = this.handleColor;
+    this.ctx.lineWidth = 5;
+    this.ctx.strokeStyle = this.handleColor;
+    this.ctx.beginPath();
+    this.ctx.moveTo(this.startX, this.startY);
+    this.ctx.lineTo(this.x, this.y);
+    this.ctx.stroke();
+    if (this.highlight) {
+      this.ctx.fillStyle = this.outlineColor;
+      this.ctx.beginPath();
+      this.ctx.arc(this.x, this.y, this.radius + this.outline, 0, Math.PI * 2);
+      this.ctx.fill();
+    }
+    this.ctx.fillStyle = this.thumbColor;
+    this.ctx.beginPath();
+    this.ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+    this.ctx.fill();
+  }
 }

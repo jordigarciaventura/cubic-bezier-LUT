@@ -12,7 +12,8 @@ h1 {
 }
 
 #app {
-  width: 500px;
+  max-width: 500px;
+  min-width: 300px;
   display: flex;
   align-items: center;
   flex-direction: column;
@@ -23,6 +24,7 @@ h1 {
 
 #canvas-bezier {
   margin-bottom: 20px;
+  width: 100%;
 }
 
 #settings-container {
@@ -69,7 +71,6 @@ h1 {
   border-radius: 32px;
   background: #a5a6f6;
   outline: none;
-  opacity: 0.7;
   -webkit-transition: 0.2s;
   transition: opacity 0.2s;
 }
@@ -80,7 +81,7 @@ h1 {
   width: 24px;
   height: 24px;
   border-radius: 50%;
-  background: #a5a6f6;
+  background: #5d5fef;
   cursor: pointer;
   border: none;
 }
@@ -90,8 +91,24 @@ h1 {
   height: 24px;
   border-radius: 50%;
   background: #5d5fef;
-  border: none;
   cursor: pointer;
+  border: none;
+}
+
+.slider:active::-webkit-slider-thumb {
+  outline: 5px solid rgba(165, 166, 246, 0.5);
+}
+
+.slider:active::-moz-range-thumb {
+  outline: 5px solid rgba(165, 166, 246, 0.5);
+}
+
+.slider:hover::-webkit-slider-thumb {
+  outline: 5px solid rgba(165, 166, 246, 0.5);
+}
+
+.slider:hover::-moz-range-thumb {
+  outline: 5px solid rgba(165, 166, 246, 0.5);
 }
 
 #container-lut {
@@ -108,18 +125,18 @@ h1 {
 #btn-copy {
   height: 32px;
   width: 84px;
-  background-color: #5D5FEF;
+  background-color: #5d5fef;
   color: white;
   border: none;
   border-radius: 24px;
 }
 
 #btn-copy:hover {
-  background-color: #7879F1;
+  background-color: #7879f1;
 }
 
 #btn-copy:active {
-  background-color: #A5A6F6;
+  background-color: #a5a6f6;
 }
 
 #textarea-lut {
