@@ -10,7 +10,30 @@
 </head>
 
 <body>
-  <canvas id="canvas-bezier" width="500" height="500"></canvas>
+  <div id="app">
+    <h1>Cubic Bezier LUT</h1>
+    <p>Get lookup tables using cubic bezier curves</p>
+    <canvas id="canvas-bezier" width="500" height="500"></canvas>
+    <div id="settings-container">
+      <div class="hitem">
+        <p class="item-name">Samples</p>
+        <input id="slider-samples" type="range" class="slider" name="samplesRange" min="2" max="100" value="101" />
+        <input id="textbox-samples" class="textbox" type="number" name="samplesInput" min="2" value="100" />
+      </div>
+      <div class="hitem">
+        <p class="item-name">Min</p>
+        <input id="text-min" class="textbox" type="number" name="minText" value="0" />
+      </div>
+      <div class="hitem">
+        <p class="item-name">Max</p>
+        <input id="text-max" class="textbox" type="number" name="maxText" value="100" />
+      </div>
+    </div>
+    <div id="container-lut">
+      <button id="btn-copy" type="button">Copy</button> 
+      <span id="textarea-lut" name="lut-table" role="textbox" readonly></span>
+    </div>
+  </div>
   <script src="script.js"></script>
 </body>
 

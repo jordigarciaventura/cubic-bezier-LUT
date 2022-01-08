@@ -1,7 +1,148 @@
+* {
+  font-family: "Roboto", sans-serif;
+}
+
+body {
+  background-color: #e7e7e7;
+  margin-bottom: 50px;
+}
+
+h1 {
+  margin-bottom: 0;
+}
+
+#app {
+  width: 500px;
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  margin-left: auto;
+  margin-right: auto;
+  box-sizing: border-box;
+}
+
 #canvas-bezier {
-	padding-left: 0;
-    padding-right: 0;
-    margin-left: auto;
-    margin-right: auto;
-	display: block;
+  margin-bottom: 20px;
+}
+
+#settings-container {
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  width: 100%;
+  gap: 12px;
+  padding-left: 14px;
+  padding-right: 14px;
+}
+
+.item-name {
+  min-width: 100px;
+  width: 100px;
+  height: 100%;
+}
+
+.hitem {
+  width: 100%;
+  display: flex;
+  box-sizing: border-box;
+  height: 24px;
+  align-items: center;
+  gap: 10px;
+}
+
+.textbox {
+  width: 70px;
+  height: 100%;
+  box-sizing: border-box;
+  border: 0;
+  background-color: white;
+  text-align: center;
+  outline: none;
+  border-radius: 6px;
+  display: block;
+}
+
+.slider {
+  -webkit-appearance: none;
+  width: 100%;
+  height: 14px;
+  border-radius: 32px;
+  background: #a5a6f6;
+  outline: none;
+  opacity: 0.7;
+  -webkit-transition: 0.2s;
+  transition: opacity 0.2s;
+}
+
+.slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #a5a6f6;
+  cursor: pointer;
+  border: none;
+}
+
+.slider::-moz-range-thumb {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #5d5fef;
+  border: none;
+  cursor: pointer;
+}
+
+#container-lut {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+  box-sizing: border-box;
+  padding-left: 14px;
+  padding-right: 14px;
+  width: 100%;
+}
+
+#btn-copy {
+  height: 32px;
+  width: 84px;
+  background-color: #5D5FEF;
+  color: white;
+  border: none;
+  border-radius: 24px;
+}
+
+#btn-copy:hover {
+  background-color: #7879F1;
+}
+
+#btn-copy:active {
+  background-color: #A5A6F6;
+}
+
+#textarea-lut {
+  box-sizing: border-box;
+  resize: none;
+  overflow: hidden;
+  width: 100%;
+  padding: 18px;
+  outline: none;
+  background-color: white;
+  border: none;
+  border-radius: 10px;
+  line-height: 1.5;
+}
+
+/* Chrome, Safari, Edge, Opera */
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* Firefox */
+input[type="number"] {
+  -moz-appearance: textfield;
 }

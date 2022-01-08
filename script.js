@@ -2,15 +2,38 @@ let canvas, rect, ctx, width, height;
 
 let handle1, handle2, bezierCurve;
 
+let textArea;
+
+let samplesSlider, samplesText;
+
+let samples = 100;
+let minValue = 0;
+let maxValue = 100;
+
+let values = [];
+
+const thumbColor = "#5D5FEF";
+const handleColor = "#A5A6F6";
+const curveColor = "#EF5DA8";
+const pointColor = "#FCDDEC";
+const backgroundColor = "#272727";
+const gridColor = "#5A5A5A";
+
 window.onload = () => {
+  // REFERENCES
+
+  textArea = document.getElementById("textarea-lut");
+  samplesSlider = document.getElementById("slider-samples");
+  samplesText = document.getElementById("textbox-samples");
+
   canvas = document.getElementById("canvas-bezier");
   rect = canvas.getBoundingClientRect();
   ctx = canvas.getContext("2d");
   width = canvas.width;
   height = canvas.height;
 
-  handle1 = new Handle(margin, height - margin, "red");
-  handle2 = new Handle(width - margin, margin, "blue");
+  handle1 = new Handle(margin, height - margin);
+  handle2 = new Handle(width - margin, margin);
   bezierCurve = new BezierCurve(
     ctx,
     margin,
@@ -18,6 +41,8 @@ window.onload = () => {
     width - margin,
     margin
   );
+
+  // EVENTS
 
   canvas.onmousedown = (e) => {
     setMousePosition(e.x, e.y);
@@ -32,30 +57,108 @@ window.onload = () => {
     draw();
   };
 
+  samplesSlider.addEventListener("input", () => {
+    samples = samplesSlider.value;
+    samplesText.value = samplesSlider.value;
+    draw();
+  });
+
+  samplesText.addEventListener("change", () => {
+    if (!samplesText.value) {
+      samplesText.value = samples;
+      return;
+    }
+    if (samplesText.value > 2) {
+      samples = samplesText.value;
+      samplesSlider.value = clamp(2, 100, samplesText.value);
+      draw();
+    } else {
+      samplesText.value = 2;
+      samples = 2;
+      samplesSlider.value = 2;
+      draw();
+    }
+  });
+
+  const minText = document.getElementById("text-min");
+  minText.addEventListener("change", () => {
+    if (!minText.value) {
+      minText.value = minValue;
+      return;
+    }
+    minValue = parseFloat(minText.value);
+    setTextArea();
+  });
+
+  const maxText = document.getElementById("text-max");
+  maxText.addEventListener("change", () => {
+    if (!maxText.value) {
+      maxText.value = maxValue;
+      return;
+    }
+    maxValue = parseFloat(maxText.value);
+    setTextArea();
+  });
+
+  const copyButton = document.getElementById("btn-copy");
+  copyButton.addEventListener("click", () => {
+    const tmpTextArea = document.createElement("textarea");
+    tmpTextArea.innerText = textArea.innerText;
+    tmpTextArea.style.visibility = "hidden";
+    document.body.appendChild(tmpTextArea);
+    tmpTextArea.select();
+    tmpTextArea.setSelectionRange(0, 99999);
+    navigator.clipboard.writeText(tmpTextArea.value);
+  });
+
   draw();
+};
+
+document.onmousemove = (e) => {
+  if (handle1.isDragging || handle2.isDragging) {
+    setMousePosition(e.x, e.y);
+
+    handle1.setPosition(mouse.x, mouse.y);
+    handle2.setPosition(mouse.x, mouse.y);
+    bezierCurve.setControlPoint1(handle1.x, handle1.y);
+    bezierCurve.setControlPoint2(handle2.x, handle2.y);
+
+    draw();
+  }
+};
+
+document.onmouseup = (e) => {
+  handle1.isDragging = false;
+  handle2.isDragging = false;
 };
 
 window.addEventListener("resize", () => {
   rect = canvas.getBoundingClientRect();
 });
 
+window.addEventListener("scroll", () => {
+  rect = canvas.getBoundingClientRect();
+});
+
+function clamp(num, min, max) {
+  return Math.min(Math.max(num, min), max);
+}
+
 const margin = 14;
 
 function setMousePosition(x, y) {
-  const clamp = (num, min, max) => Math.min(Math.max(num, min), max);
-
   mouse.x = clamp(x - rect.left, margin, width - margin);
   mouse.y = clamp(y - rect.top, margin, height - margin);
 }
 
 function drawBackground() {
-  ctx.fillStyle = "black";
+  ctx.fillStyle = backgroundColor;
   ctx.fillRect(margin, margin, width - 2 * margin, height - 2 * margin);
 
   const cells = 10;
   const cellWidth = (width - margin * 2) / cells;
   const cellHeight = (height - margin * 2) / cells;
-  ctx.strokeStyle = "gray";
+  ctx.strokeStyle = gridColor;
   ctx.lineWidth = 1;
   for (let i = 0; i <= cells; i++) {
     ctx.moveTo(margin + cellWidth * i, margin);
@@ -72,13 +175,12 @@ const mouse = {
 };
 
 class Handle {
-  constructor(xFrom, yFrom, color) {
+  constructor(xFrom, yFrom) {
     this.xFrom = xFrom;
     this.yFrom = yFrom;
     this.x = xFrom;
     this.y = yFrom;
-    this.color = color;
-    this.radius = margin;
+    this.radius = margin - 2;
     this.isDragging = false;
   }
 
@@ -90,17 +192,21 @@ class Handle {
   }
 
   draw() {
-    ctx.fillStyle = this.color;
+    ctx.fillStyle = handleColor;
     ctx.beginPath();
-    ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
     ctx.arc(this.xFrom, this.yFrom, 5, 0, Math.PI * 2);
     ctx.fill();
-    ctx.strokeStyle = this.color;
+    ctx.strokeStyle = handleColor;
     ctx.lineWidth = 5;
+    ctx.strokeStyle = handleColor;
     ctx.beginPath();
     ctx.moveTo(this.xFrom, this.yFrom);
     ctx.lineTo(this.x, this.y);
     ctx.stroke();
+    ctx.fillStyle = thumbColor;
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+    ctx.fill();
   }
 
   collision(x, y) {
@@ -134,7 +240,7 @@ class BezierCurve {
 
   draw() {
     this.ctx.beginPath();
-    this.ctx.strokeStyle = "yellow";
+    this.ctx.strokeStyle = curveColor;
     this.ctx.lineWidth = 5;
     this.ctx.moveTo(this.startPoint.x, this.startPoint.y);
     this.ctx.bezierCurveTo(
@@ -146,6 +252,8 @@ class BezierCurve {
       this.endPoint.y
     );
     this.ctx.stroke();
+
+    this.evaluate(samples);
   }
 
   evaluateY(t) {
@@ -154,111 +262,131 @@ class BezierCurve {
       3 * Math.pow(1 - t, 2) * t * this.controlPoint1.y +
       3 * (1 - t) * Math.pow(t, 2) * this.controlPoint2.y +
       Math.pow(t, 3) * this.endPoint.y;
-    // return inverseLerp(this.startPoint.y, this.endPoint.y, value)
     return value;
   }
 
-  evaluateX(t) {
-    const value =
-      Math.pow(1 - t, 3) * this.startPoint.x +
-      3 * Math.pow(1 - t, 2) * t * this.controlPoint1.x +
-      3 * (1 - t) * Math.pow(t, 2) * this.controlPoint2.x +
-      Math.pow(t, 3) * this.endPoint.x;
-    // return inverseLerp(this.startPoint.y, this.endPoint.y, value)
-    return value;
-  }
-
-  findT(x) {
+  evaluateT(x) {
     const a = this.startPoint.x;
     const b = this.controlPoint1.x;
     const c = this.controlPoint2.x;
     const d = this.endPoint.x;
 
-    const solutions = solveCubic(-a+3*b-3*c+d, 3*a-6*b+3*c, -3*a+3*b, a-x);
-    for(let i = 0; i < solutions.length; i++) {
+    const solutions = solveCubic(
+      -a + 3 * b - 3 * c + d,
+      3 * a - 6 * b + 3 * c,
+      -3 * a + 3 * b,
+      a - x
+    );
+    for (let i = 0; i < solutions.length; i++) {
       if (0 <= solutions[i] && solutions[i] <= 1) return solutions[i];
     }
-    return 0;
+    return undefined;
   }
 
-  getEvaluation(min, max, steps) {
-    let values = []
-    for(let i = 0; i < steps; i++) {
-      const x = lerp(this.startPoint.x, this.endPoint.x, i/(steps-1));
-      const y = this.evaluateY(this.findT(x));
+  evaluate(steps) {
+    values = [];
+    for (let i = 0; i < steps; i++) {
+      const x = lerp(this.startPoint.x, this.endPoint.x, i / (steps - 1));
+      const y = this.evaluateY(this.evaluateT(x));
       drawPoint(x, y);
-      const t = inverseLerp(this.startPoint.y, this.endPoint.y, y);
-      const value = lerp(min, max, t);
+      const value = inverseLerp(this.startPoint.y, this.endPoint.y, y);
       values.push(value);
     }
-    console.log(values);
+    setTextArea();
   }
 }
 
+function setTextArea() {
+  const range = maxValue - minValue;
+  let scale;
+  if (range > 10) {
+    scale = 1;
+  } else if (range > 1) {
+    scale = 10;
+  } else {
+    scale = 100;
+  }
+
+  textArea.innerText = values
+    .map((v) => {
+      return Math.round(lerp(minValue, maxValue, v)*scale)/scale
+    })
+    .join(", ");
+}
+
 function cuberoot(x) {
-  var y = Math.pow(Math.abs(x), 1/3);
+  var y = Math.pow(Math.abs(x), 1 / 3);
   return x < 0 ? -y : y;
 }
 
 function solveCubic(a, b, c, d) {
-  if (Math.abs(a) < 1e-8) { // Quadratic case, ax^2+bx+c=0
-      a = b; b = c; c = d;
-      if (Math.abs(a) < 1e-8) { // Linear case, ax+b=0
-          a = b; b = c;
-          if (Math.abs(a) < 1e-8) // Degenerate case
-              return [];
-          return [-b/a];
-      }
+  if (Math.abs(a) < 1e-8) {
+    // Quadratic case, ax^2+bx+c=0
+    a = b;
+    b = c;
+    c = d;
+    if (Math.abs(a) < 1e-8) {
+      // Linear case, ax+b=0
+      a = b;
+      b = c;
+      if (Math.abs(a) < 1e-8)
+        // Degenerate case
+        return [];
+      return [-b / a];
+    }
 
-      var D = b*b - 4*a*c;
-      if (Math.abs(D) < 1e-8)
-          return [-b/(2*a)];
-      else if (D > 0)
-          return [(-b+Math.sqrt(D))/(2*a), (-b-Math.sqrt(D))/(2*a)];
-      return [];
+    var D = b * b - 4 * a * c;
+    if (Math.abs(D) < 1e-8) return [-b / (2 * a)];
+    else if (D > 0)
+      return [(-b + Math.sqrt(D)) / (2 * a), (-b - Math.sqrt(D)) / (2 * a)];
+    return [];
   }
 
   // Convert to depressed cubic t^3+pt+q = 0 (subst x = t - b/3a)
-  var p = (3*a*c - b*b)/(3*a*a);
-  var q = (2*b*b*b - 9*a*b*c + 27*a*a*d)/(27*a*a*a);
+  var p = (3 * a * c - b * b) / (3 * a * a);
+  var q = (2 * b * b * b - 9 * a * b * c + 27 * a * a * d) / (27 * a * a * a);
   var roots;
 
-  if (Math.abs(p) < 1e-8) { // p = 0 -> t^3 = -q -> t = -q^1/3
-      roots = [cuberoot(-q)];
-  } else if (Math.abs(q) < 1e-8) { // q = 0 -> t^3 + pt = 0 -> t(t^2+p)=0
-      roots = [0].concat(p < 0 ? [Math.sqrt(-p), -Math.sqrt(-p)] : []);
+  if (Math.abs(p) < 1e-8) {
+    // p = 0 -> t^3 = -q -> t = -q^1/3
+    roots = [cuberoot(-q)];
+  } else if (Math.abs(q) < 1e-8) {
+    // q = 0 -> t^3 + pt = 0 -> t(t^2+p)=0
+    roots = [0].concat(p < 0 ? [Math.sqrt(-p), -Math.sqrt(-p)] : []);
   } else {
-      var D = q*q/4 + p*p*p/27;
-      if (Math.abs(D) < 1e-8) {       // D = 0 -> two roots
-          roots = [-1.5*q/p, 3*q/p];
-      } else if (D > 0) {             // Only one real root
-          var u = cuberoot(-q/2 - Math.sqrt(D));
-          roots = [u - p/(3*u)];
-      } else {                        // D < 0, three roots, but needs to use complex numbers/trigonometric solution
-          var u = 2*Math.sqrt(-p/3);
-          var t = Math.acos(3*q/p/u)/3;  // D < 0 implies p < 0 and acos argument in [-1..1]
-          var k = 2*Math.PI/3;
-          roots = [u*Math.cos(t), u*Math.cos(t-k), u*Math.cos(t-2*k)];
-      }
+    var D = (q * q) / 4 + (p * p * p) / 27;
+    if (Math.abs(D) < 1e-8) {
+      // D = 0 -> two roots
+      roots = [(-1.5 * q) / p, (3 * q) / p];
+    } else if (D > 0) {
+      // Only one real root
+      var u = cuberoot(-q / 2 - Math.sqrt(D));
+      roots = [u - p / (3 * u)];
+    } else {
+      // D < 0, three roots, but needs to use complex numbers/trigonometric solution
+      var u = 2 * Math.sqrt(-p / 3);
+      var t = Math.acos((3 * q) / p / u) / 3; // D < 0 implies p < 0 and acos argument in [-1..1]
+      var k = (2 * Math.PI) / 3;
+      roots = [u * Math.cos(t), u * Math.cos(t - k), u * Math.cos(t - 2 * k)];
+    }
   }
 
   // Convert back from depressed cubic
-  for (var i = 0; i < roots.length; i++)
-      roots[i] -= b/(3*a);
+  for (var i = 0; i < roots.length; i++) roots[i] -= b / (3 * a);
 
   return roots;
 }
 
 function lerp(min, max, t) {
-  return min + (max-min)*t;
+  return min + (max - min) * t;
 }
 
 function inverseLerp(min, max, value) {
-  return (value - min) / (max-min);
+  return (value - min) / (max - min);
 }
 
 function drawPoint(x, y) {
-  ctx.fillStyle = "red";
+  ctx.fillStyle = pointColor;
   ctx.beginPath();
   ctx.arc(x, y, 2, 0, Math.PI * 2);
   ctx.fill();
@@ -270,23 +398,4 @@ function draw() {
   bezierCurve.draw();
   handle1.draw();
   handle2.draw();
-  bezierCurve.getEvaluation(0, 100, 101);
 }
-
-document.onmousemove = (e) => {
-  if (handle1.isDragging || handle2.isDragging) {
-    setMousePosition(e.x, e.y);
-
-    handle1.setPosition(mouse.x, mouse.y);
-    handle2.setPosition(mouse.x, mouse.y);
-    bezierCurve.setControlPoint1(handle1.x, handle1.y);
-    bezierCurve.setControlPoint2(handle2.x, handle2.y);
-
-    draw();
-  }
-};
-
-document.onmouseup = (e) => {
-  handle1.isDragging = false;
-  handle2.isDragging = false;
-};
