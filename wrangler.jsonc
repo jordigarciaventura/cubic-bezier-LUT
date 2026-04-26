@@ -1,0 +1,7 @@
+{
+  "name": "cubic-bezier-lut",
+  "compatibility_date": "2026-04-26",
+  "assets": {
+    "directory": "."
+  }
+}
