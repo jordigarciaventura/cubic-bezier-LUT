@@ -5,7 +5,8 @@
     "build": "vp build"
   },
   "devDependencies": {
-    "vite-plus": "catalog:"
+    "vite-plus": "catalog:",
+    "wrangler": "^4.90.0"
   },
   "packageManager": "pnpm@11.0.9"
 }
