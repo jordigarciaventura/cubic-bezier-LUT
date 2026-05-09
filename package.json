@@ -1,0 +1,11 @@
+{
+  "type": "module",
+  "scripts": {
+    "prepare": "vp config",
+    "build": "vp build"
+  },
+  "devDependencies": {
+    "vite-plus": "catalog:"
+  },
+  "packageManager": "pnpm@11.0.9"
+}

@@ -1,2 +1,4 @@
 .git
 .wrangler
+dist
+node_modules

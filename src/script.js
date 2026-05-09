@@ -22,7 +22,7 @@ function calculateValues() {
     bezierPlot.normalizedControlPoint1Y,
     bezierPlot.normalizedControlPoint2X,
     bezierPlot.normalizedControlPoint2Y,
-    samples
+    samples,
   );
   bezierPlot.samples = values;
   bezierPlot.draw();
@@ -106,7 +106,7 @@ window.onload = () => {
   });
 
   const copyButton = document.getElementById("btn-copy");
-  copyButton.addEventListener("click", () => {
+  copyButton.addEventListener("click", async () => {
     const tmpTextArea = document.createElement("textarea");
     tmpTextArea.innerText = textArea.innerText;
     tmpTextArea.style.visibility = "hidden";
@@ -114,7 +114,7 @@ window.onload = () => {
     document.body.appendChild(tmpTextArea);
     tmpTextArea.select();
     tmpTextArea.setSelectionRange(0, 99999);
-    navigator.clipboard.writeText(tmpTextArea.value);
+    await navigator.clipboard.writeText(tmpTextArea.value);
   });
 
   calculateValues();
@@ -160,7 +160,7 @@ function getCubicBezierPoints(
   normalizedControlPoint1Y,
   normalizedControlPoint2X,
   normalizedControlPoint2Y,
-  count
+  count,
 ) {
   function evaluateY(t) {
     return (
@@ -213,14 +213,14 @@ class BezierPlot {
       this.startPointX,
       this.startPointY,
       this.controlPoint1X,
-      this.controlPoint1Y
+      this.controlPoint1Y,
     );
     this.handle2 = new HandlePlot(
       this.ctx,
       this.endPointX,
       this.endPointY,
       this.controlPoint2X,
-      this.controlPoint2Y
+      this.controlPoint2Y,
     );
 
     this.canvas.onmousedown = (e) => {
@@ -268,10 +268,7 @@ class BezierPlot {
     };
 
     this.canvas.addEventListener("mouseout", (e) => {
-      if (
-        this.anyHandleHighlighted &&
-        !(this.handle1.isDragging || this.handle2.isDragging)
-      ) {
+      if (this.anyHandleHighlighted && !(this.handle1.isDragging || this.handle2.isDragging)) {
         this.handle1.highlight = false;
         this.handle2.highlight = false;
         this.anyHandleHighlighted = false;
@@ -301,16 +298,12 @@ class BezierPlot {
       }
 
       if (this.anyHandleHighlighted) {
-        if (
-          !this.handle1.collision(e.x - this.rect.left, e.y - this.rect.top)
-        ) {
+        if (!this.handle1.collision(e.x - this.rect.left, e.y - this.rect.top)) {
           this.handle1.highlight = false;
           this.anyHandleHighlighted = false;
           this.draw();
         }
-        if (
-          !this.handle2.collision(e.x - this.rect.left, e.y - this.rect.top)
-        ) {
+        if (!this.handle2.collision(e.x - this.rect.left, e.y - this.rect.top)) {
           this.handle2.highlight = false;
           this.anyHandleHighlighted = false;
           this.draw();
@@ -332,16 +325,8 @@ class BezierPlot {
     this.controlPoint1Y = y;
     this.handle1.setPosition(x, y);
 
-    this.normalizedControlPoint1X = inverseLerp(
-      this.startPointX,
-      this.endPointX,
-      x
-    );
-    this.normalizedControlPoint1Y = inverseLerp(
-      this.startPointY,
-      this.endPointY,
-      y
-    );
+    this.normalizedControlPoint1X = inverseLerp(this.startPointX, this.endPointX, x);
+    this.normalizedControlPoint1Y = inverseLerp(this.startPointY, this.endPointY, y);
   }
 
   setControlPoint2(x, y) {
@@ -349,16 +334,8 @@ class BezierPlot {
     this.controlPoint2Y = y;
     this.handle2.setPosition(x, y);
 
-    this.normalizedControlPoint2X = inverseLerp(
-      this.startPointX,
-      this.endPointX,
-      x
-    );
-    this.normalizedControlPoint2Y = inverseLerp(
-      this.startPointY,
-      this.endPointY,
-      y
-    );
+    this.normalizedControlPoint2X = inverseLerp(this.startPointX, this.endPointX, x);
+    this.normalizedControlPoint2Y = inverseLerp(this.startPointY, this.endPointY, y);
   }
 
   updateRect() {
@@ -368,38 +345,22 @@ class BezierPlot {
 
     this.startPointY = this.rect.height - this.margin;
     this.endPointX = this.rect.width - this.margin;
-    this.controlPoint1X = lerp(
-      this.startPointX,
-      this.endPointX,
-      this.normalizedControlPoint1X
-    );
-    this.controlPoint1Y = lerp(
-      this.startPointY,
-      this.endPointY,
-      this.normalizedControlPoint1Y
-    );
-    this.controlPoint2X = lerp(
-      this.startPointX,
-      this.endPointX,
-      this.normalizedControlPoint2X
-    );
-    this.controlPoint2Y = lerp(
-      this.startPointY,
-      this.endPointY,
-      this.normalizedControlPoint2Y
-    );
+    this.controlPoint1X = lerp(this.startPointX, this.endPointX, this.normalizedControlPoint1X);
+    this.controlPoint1Y = lerp(this.startPointY, this.endPointY, this.normalizedControlPoint1Y);
+    this.controlPoint2X = lerp(this.startPointX, this.endPointX, this.normalizedControlPoint2X);
+    this.controlPoint2Y = lerp(this.startPointY, this.endPointY, this.normalizedControlPoint2Y);
 
     this.handle1.updatePoints(
       this.startPointX,
       this.startPointY,
       this.controlPoint1X,
-      this.controlPoint1Y
+      this.controlPoint1Y,
     );
     this.handle2.updatePoints(
       this.endPointX,
       this.endPointY,
       this.controlPoint2X,
-      this.controlPoint2Y
+      this.controlPoint2Y,
     );
 
     this.draw();
@@ -427,7 +388,7 @@ class BezierPlot {
       this.margin,
       this.margin,
       this.rect.width - 2 * this.margin,
-      this.rect.height - 2 * this.margin
+      this.rect.height - 2 * this.margin,
     );
 
     const cells = 10;
@@ -436,15 +397,9 @@ class BezierPlot {
     this.ctx.lineWidth = 1;
     for (let i = 0; i <= cells; i++) {
       this.ctx.moveTo(this.margin + cellSize * i, this.margin);
-      this.ctx.lineTo(
-        this.margin + cellSize * i,
-        this.rect.height - this.margin
-      );
+      this.ctx.lineTo(this.margin + cellSize * i, this.rect.height - this.margin);
       this.ctx.moveTo(this.margin, this.margin + cellSize * i);
-      this.ctx.lineTo(
-        this.rect.width - this.margin,
-        this.margin + cellSize * i
-      );
+      this.ctx.lineTo(this.rect.width - this.margin, this.margin + cellSize * i);
     }
     this.ctx.stroke();
   }
@@ -460,7 +415,7 @@ class BezierPlot {
       this.controlPoint2X,
       this.controlPoint2Y,
       this.endPointX,
-      this.endPointY
+      this.endPointY,
     );
     this.ctx.stroke();
   }
