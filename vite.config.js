@@ -1,4 +1,5 @@
 import { defineConfig } from "vite-plus";
+import { resolve } from "path";
 
 const base = process.env.VITE_BASE_URL || "/";
 const baseDir = process.env.VITE_BASE_URL?.replace(/^\//, "").replace(/\/$/, "");
