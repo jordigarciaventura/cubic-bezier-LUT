@@ -1,18 +1,12 @@
 import { defineConfig } from "vite-plus";
 
-const base = process.env.VITE_BASE_URL || "/";
-const baseDir = process.env.VITE_BASE_URL?.replace(/^\//, "").replace(/\/$/, "");
-const outDir = baseDir ? `dist/${baseDir}` : "dist";
-
 export default defineConfig({
   root: "src",
+  base: process.env.VITE_BASE_URL || "/",
   build: {
-    outDir: `../${outDir}`,
+    outDir: `../dist`,
   },
   staged: {
     "*": "vp check --fix",
   },
-  fmt: {},
-  base,
-  lint: { options: { typeAware: true, typeCheck: true } },
 });
