@@ -1,0 +1,36 @@
+version: '3'
+
+vars:
+  S3_BUCKET: jordigarciaventura-cubic-bezier-lut
+  CLOUDFRONT_DISTRIBUTION_ID: E1CHR585LVJBS3
+
+tasks:
+  default:
+    cmds:
+    - task --list
+    silent: true
+
+  login:
+    desc: Authenticate with AWS before deploying static files.
+    cmds:
+    - aws login
+    silent: true
+
+  deploy:
+    desc: Deploy static files from ./src/ to S3, deleting obsolete files.
+    cmds:
+    - aws s3 sync ./src/ s3://{{.S3_BUCKET}}/ --delete
+    silent: true
+
+  invalidate:
+    desc: Invalidate all CloudFront cache entries so visitors receive the latest files.
+    cmds:
+    - >-
+      aws cloudfront create-invalidation --distribution-id {{.CLOUDFRONT_DISTRIBUTION_ID}} --paths "/*"
+    silent: true
+
+  release:
+    desc: Deploy static files to S3 and invalidate the CloudFront cache.
+    cmds:
+    - task: deploy
+    - task: invalidate
